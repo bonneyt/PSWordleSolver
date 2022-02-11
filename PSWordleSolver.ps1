@@ -43,7 +43,7 @@ $sends = $ChromeDriver.FindElementByXPath('/html/body')
 $sends.click()
 
 ##GLOBALS
-[System.Collections.ArrayList]$words = Get-Content 'C:\Users\bonne\Desktop\wordle solver\wordlist.txt'
+[System.Collections.ArrayList]$words = Get-Content 'wordlist.txt'
 $perfect = @{}
 $bad = @{}
 $good = @{}
@@ -267,9 +267,6 @@ function guess {
 }
 
 start-sleep -seconds 1
-
-#first run test with CRANE
-sendkeys -word 'crane'
 
 $q = 0
 while ($q -lt 6){
