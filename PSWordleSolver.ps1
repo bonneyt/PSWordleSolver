@@ -1,4 +1,14 @@
-﻿$url = 'https://www.nytimes.com/games/wordle/index.html'
+$url = 'https://www.nytimes.com/games/wordle/index.html'
+
+#download the main javascript file to collect the official list of possible wordle words
+$js = curl -Uri 'https://www.nytimes.com/games/wordle/main.bd4cb59c.js'
+
+#word list is found within the variable Ma.  isolate and extract to $js 
+$js = ($js.ParsedHtml.body.innerText -split "var Ma=\[")[1]
+$js = ($js -split "\]")[0]
+
+#parse the word list, usisng comma as the delimmiter and remove the double quotes
+$parsedwords = $js.Split(',') -replace """"
 
 #change to false if command prompt and browser window are needed
 $runsilent = $false
@@ -43,7 +53,9 @@ $sends = $ChromeDriver.FindElementByXPath('/html/body')
 $sends.click()
 
 ##GLOBALS
-[System.Collections.ArrayList]$words = Get-Content 'wordlist.txt'
+[System.Collections.ArrayList]$words = $parsedwords #turns the parsed words list into an array list
+$results = "results.txt"
+$usedwords = @{}
 $perfect = @{}
 $bad = @{}
 $good = @{}
@@ -61,16 +73,19 @@ $row5 = $null
 $row6 = $null
 $row = @()
 $i = $null
-$count = 1
+$win = $false
 
 #sends the new word
 function sendkeys{
     param(
         $word
     )
-
+    $global:q++
+    $global:num++
+    $usedwords.Add($num,$word)
     $sends.SendKeys($word)
     $sends.SendKeys([OpenQA.Selenium.Keys]::Enter)
+
 
     getrowdata
 }
@@ -134,6 +149,8 @@ function parse{
 
         if(($l -split '"')[7] -eq 'win'){
             write-host "you win!"
+            $global:win = $true
+            break
         } else {
             $position = $count
             $letter = ($l -split '"')[1]
@@ -268,13 +285,42 @@ function guess {
 
 start-sleep -seconds 1
 
+[int]$num = 0
+#first run test with specified word
+#sendkeys -word 'crane'
+
+#first run with random word
+guess
+
 $q = 0
-while ($q -lt 6){
-    start-sleep -seconds 2 
-    guess
-    $q++
+while ($q -le 6 -or $win -ne $true){
     
+    if ($win -eq $true){
+        #remove the duplicate word in usedwords (created because the sendkeys function runs one extra time after a win)
+        #i haven't figured out why or how to stop it
+        $usedwords.Remove($usedwords.count)
+        break
+    } else {
+        start-sleep -seconds 2 
+        guess
+    }
 }
+
+start-sleep -seconds 3
+#click the share button
+$share = $ChromeDriver.ExecuteScript("return document.querySelector('game-app').shadowRoot.querySelector('game-stats').shadowRoot.querySelectorAll('#share-button')").click()
+start-sleep -seconds 2
+
+#extract the game number and the number of guesses to write to the results file
+$gamenum = ((get-clipboard)[0].Split(' '))[1]
+$guesses = ((((Get-Clipboard)[0].Split('/'))[0]).split(' '))[2]
+Write-Output "$(get-date -Format 'MM-dd-yyyy hh:mm:ss') - Game $gamenum - $guesses/6" |Out-File $results -Append
+
+#write the words in order that were used in each attempt
+foreach ($i in $usedwords.GetEnumerator() |sort name){
+    Write-Output "Guess $($i.Name). $($i.value)" |Out-File $results -Append
+}
+
 
 function reset{
     $ChromeDriver.quit()
