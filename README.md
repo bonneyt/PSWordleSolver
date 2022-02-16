@@ -14,3 +14,7 @@ download chrome driver that matches your browser's version
 https://chromedriver.chromium.org/downloads
 
 i put both the webdriver.dll from the selinium module and chromedriver.exe in a folder on my C drive as the "working directory"
+
+Updated 2/16/2022:
+The latest iteration no longer requires an external word list.  At each run the word list is extracted from the game itself
+Also new is recording each attempt's result, including game number, how many attempts and each word that was used.  By default the result saves to the running directory as results.txt
